@@ -1,0 +1,1123 @@
+@page "/dashboard"
+@rendermode InteractiveServer
+@using BrisaVehicleDashboard.Models
+@using BrisaVehicleDashboard.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Components.Rendering
+@inject VehicleDataService VehicleDataService
+
+<PageTitle>Vehicle Dashboard</PageTitle>
+
+<link href="dashboard.css" rel="stylesheet" />
+
+<div class="container-fluid py-4 px-3 px-md-5">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+            <div class="mb-3 mb-md-0">
+                <h1>Brisa Vehicle Dashboard</h1>
+                <p class="mb-0 opacity-75">Araç verilerini görüntüle, ara ve yönet</p>
+            </div>
+            <div class="search-container" style="width: 100%; max-width: 400px;">
+                <input type="text" 
+                       class="form-control w-100" 
+                       placeholder="Ara..." 
+                       value="@searchTerm" 
+                       @oninput="OnSearchChanged" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+            <div class="stats-grid">
+        <div class="stat-card brand-card" @onclick='() => SetActiveTab("brands")' style="cursor: pointer;">
+            <div class="stat-card-content">
+                <div class="stat-number">@brands.Count</div>
+                <div class="stat-label">brisavehiclebrand</div>
+            </div>
+        </div>
+        <div class="stat-card group-card" @onclick='() => SetActiveTab("groups")' style="cursor: pointer;">
+            <div class="stat-card-content">
+                <div class="stat-number">@groups.Count</div>
+                <div class="stat-label">brisavehiclegroup</div>
+            </div>
+        </div>
+        <div class="stat-card model-card" @onclick='() => SetActiveTab("models")' style="cursor: pointer;">
+            <div class="stat-card-content">
+                <div class="stat-number">@models.Count</div>
+                <div class="stat-label">brisavehiclemodel</div>
+            </div>
+        </div>
+        <div class="stat-card year-card" @onclick='() => SetActiveTab("years")' style="cursor: pointer;">
+            <div class="stat-card-content">
+                <div class="stat-number">@productYearsTotalCount.ToString("N0")</div>
+                <div class="stat-label">brisavehicleproductyear</div>
+            </div>
+        </div>
+        <div class="stat-card version-card" @onclick='() => SetActiveTab("versions")' style="cursor: pointer;">
+            <div class="stat-card-content">
+                <div class="stat-number">@versionsTotalCount.ToString("N0")</div>
+                <div class="stat-label">brisavehicleversion</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="modern-tabs">
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(activeTab == "brands" ? "active" : "")" 
+                        @onclick='() => SetActiveTab("brands")'>
+                    brisavehiclebrand (@brands.Count)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(activeTab == "groups" ? "active" : "")" 
+                        @onclick='() => SetActiveTab("groups")'>
+                    brisavehiclegroup (@groups.Count)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(activeTab == "models" ? "active" : "")" 
+                        @onclick='() => SetActiveTab("models")'>
+                    brisavehiclemodel (@models.Count)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(activeTab == "years" ? "active" : "")" 
+                        @onclick='() => SetActiveTab("years")'>
+                    brisavehicleproductyear (@productYearsTotalCount.ToString("N0"))
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(activeTab == "versions" ? "active" : "")" 
+                        @onclick='() => SetActiveTab("versions")'>
+                    brisavehicleversion (@versionsTotalCount.ToString("N0"))
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <div class="tab-content">
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <div class="spinner-modern"></div>
+                <p class="mt-3 text-muted">Veriler yükleniyor...</p>
+            </div>
+        }
+        else
+        {
+            @if (activeTab == "brands")
+            {
+                @BrandsTableSimple(GetFilteredBrands())
+            }
+            else if (activeTab == "groups")
+            {
+                @GroupsTableSimple(GetFilteredGroups())
+            }
+            else if (activeTab == "models")
+            {
+                @ModelsTableSimple(GetFilteredModels())
+            }
+            else if (activeTab == "years")
+            {
+                @ProductYearsTableSimple(productYearsPaged)
+                @if (productYearsPaged != null && productYearsPaged.TotalPages > 1)
+                {
+                    <div class="pagination-modern">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item @(currentPageYears <= 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick='() => LoadProductYearsPage(currentPageYears - 1)' disabled="@(currentPageYears <= 1)">Önceki</button>
+                            </li>
+                            @for (int i = Math.Max(1, currentPageYears - 2); i <= Math.Min(productYearsPaged.TotalPages, currentPageYears + 2); i++)
+                            {
+                                var pageNum = i;
+                                <li class="page-item @(pageNum == currentPageYears ? "active" : "")">
+                                    <button class="page-link" @onclick='() => LoadProductYearsPage(pageNum)'>@pageNum</button>
+                                </li>
+                            }
+                            <li class="page-item @(currentPageYears >= productYearsPaged.TotalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick='() => LoadProductYearsPage(currentPageYears + 1)' disabled="@(currentPageYears >= productYearsPaged.TotalPages)">Sonraki</button>
+                            </li>
+                            </ul>
+                        </nav>
+                        <div class="text-center mt-3">
+                            <span class="badge-modern">Sayfa @currentPageYears / @productYearsPaged.TotalPages (@productYearsPaged.TotalCount.ToString("N0") kayıt)</span>
+                        </div>
+                    </div>
+                }
+            }
+            else if (activeTab == "versions")
+            {
+                @VersionsTableSimple(versionsPaged)
+                @if (versionsPaged != null && versionsPaged.TotalPages > 1)
+                {
+                    <div class="pagination-modern">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item @(currentPageVersions <= 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick='() => LoadVersionsPage(currentPageVersions - 1)' disabled="@(currentPageVersions <= 1)">Önceki</button>
+                            </li>
+                            @for (int i = Math.Max(1, currentPageVersions - 2); i <= Math.Min(versionsPaged.TotalPages, currentPageVersions + 2); i++)
+                            {
+                                var pageNum = i;
+                                <li class="page-item @(pageNum == currentPageVersions ? "active" : "")">
+                                    <button class="page-link" @onclick='() => LoadVersionsPage(pageNum)'>@pageNum</button>
+                                </li>
+                            }
+                            <li class="page-item @(currentPageVersions >= versionsPaged.TotalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick='() => LoadVersionsPage(currentPageVersions + 1)' disabled="@(currentPageVersions >= versionsPaged.TotalPages)">Sonraki</button>
+                            </li>
+                            </ul>
+                        </nav>
+                        <div class="text-center mt-3">
+                            <span class="badge-modern">Sayfa @currentPageVersions / @versionsPaged.TotalPages (@versionsPaged.TotalCount.ToString("N0") kayıt)</span>
+                        </div>
+                    </div>
+                }
+            }
+        }
+    </div>
+</div>
+
+<!-- Detail Modal -->
+@if (showModal && selectedItemDetail != null)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Detay</h3>
+                <button class="modal-close" @onclick="CloseModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                @selectedItemDetail
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string activeTab = "brands";
+    private string searchTerm = string.Empty;
+    private bool isLoading = true;
+    private const int PageSize = 100;
+
+    // For paginated tabs
+    private int currentPageYears = 1;
+    private int currentPageVersions = 1;
+    private PagedResult<VehicleProductYear>? productYearsPaged;
+    private PagedResult<VehicleVersion>? versionsPaged;
+    private int productYearsTotalCount = 0;
+    private int versionsTotalCount = 0;
+
+    // For non-paginated tabs
+    private List<VehicleBrand> brands = new();
+    private List<VehicleGroup> groups = new();
+    private List<VehicleModel> models = new();
+    private List<VehicleProductYear> productYears = new(); // Keep for total count
+    private List<VehicleVersion> versions = new(); // Keep for total count
+
+    // Modal state
+    private bool showModal = false;
+    private RenderFragment? selectedItemDetail = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            // Load non-paginated data
+            brands = await VehicleDataService.GetAllBrandsAsync();
+            groups = await VehicleDataService.GetAllGroupsAsync();
+            models = await VehicleDataService.GetAllModelsAsync();
+            
+            // For paginated tabs, just get counts initially
+            productYears = await VehicleDataService.GetAllProductYearsAsync();
+            productYearsTotalCount = productYears.Count;
+            
+            versions = await VehicleDataService.GetAllVersionsAsync();
+            versionsTotalCount = versions.Count;
+
+            // Load first page for paginated tabs
+            await LoadProductYearsPage(1);
+            await LoadVersionsPage(1);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadProductYearsPage(int page)
+    {
+        currentPageYears = page;
+        productYearsPaged = await VehicleDataService.GetProductYearsPagedAsync(page, PageSize, searchTerm);
+        StateHasChanged();
+    }
+
+    private async Task LoadVersionsPage(int page)
+    {
+        currentPageVersions = page;
+        versionsPaged = await VehicleDataService.GetVersionsPagedAsync(page, PageSize, searchTerm);
+        StateHasChanged();
+    }
+
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        // Reset pagination when switching tabs
+        if (tab == "years")
+        {
+            currentPageYears = 1;
+            _ = LoadProductYearsPage(1);
+        }
+        else if (tab == "versions")
+        {
+            currentPageVersions = 1;
+            _ = LoadVersionsPage(1);
+        }
+    }
+
+    private int GetTotalCount()
+    {
+        return activeTab switch
+        {
+            "brands" => brands.Count,
+            "groups" => groups.Count,
+            "models" => models.Count,
+            "years" => productYearsTotalCount,
+            "versions" => versionsTotalCount,
+            _ => 0
+        };
+    }
+
+    private int GetFilteredCount()
+    {
+        return activeTab switch
+        {
+            "brands" => GetFilteredBrands().Count,
+            "groups" => GetFilteredGroups().Count,
+            "models" => GetFilteredModels().Count,
+            _ => 0
+        };
+    }
+
+    private int GetPagedTotalCount()
+    {
+        return activeTab switch
+        {
+            "years" => productYearsPaged?.Items.Count ?? 0,
+            "versions" => versionsPaged?.Items.Count ?? 0,
+            _ => 0
+        };
+    }
+
+    private List<VehicleBrand> GetFilteredBrands()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return brands;
+
+        var term = searchTerm.ToLowerInvariant();
+        return brands.Where(b => 
+            (b.Description?.ToLowerInvariant().Contains(term) ?? false) ||
+            (b.UbyId?.ToLowerInvariant().Contains(term) ?? false) ||
+            (b.Uri?.ToLowerInvariant().Contains(term) ?? false)
+        ).ToList();
+    }
+
+    private List<VehicleGroup> GetFilteredGroups()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return groups;
+
+        var term = searchTerm.ToLowerInvariant();
+        return groups.Where(g => 
+            (g.UbyId?.ToLowerInvariant().Contains(term) ?? false) ||
+            (g.Uri?.ToLowerInvariant().Contains(term) ?? false)
+        ).ToList();
+    }
+
+    private List<VehicleModel> GetFilteredModels()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return models;
+
+        var term = searchTerm.ToLowerInvariant();
+        return models.Where(m => 
+            (m.Description?.ToLowerInvariant().Contains(term) ?? false) ||
+            (m.UbyId?.ToLowerInvariant().Contains(term) ?? false) ||
+            (m.Uri?.ToLowerInvariant().Contains(term) ?? false) ||
+            (m.Brand?.Description?.ToLowerInvariant().Contains(term) ?? false)
+        ).ToList();
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        
+        // Reset pagination and reload for paginated tabs
+        if (activeTab == "years")
+        {
+            currentPageYears = 1;
+            await LoadProductYearsPage(1);
+        }
+        else if (activeTab == "versions")
+        {
+            currentPageVersions = 1;
+            await LoadVersionsPage(1);
+        }
+        
+        StateHasChanged();
+    }
+
+    private void ShowDetailModal(object? item)
+    {
+        if (item == null)
+        {
+            selectedItemDetail = null;
+            showModal = false;
+            return;
+        }
+
+        selectedItemDetail = item switch
+        {
+            VehicleBrand brand => RenderBrandDetail(brand),
+            VehicleGroup group => RenderGroupDetail(group),
+            VehicleModel model => RenderModelDetail(model),
+            VehicleProductYear year => RenderProductYearDetail(year),
+            VehicleVersion version => RenderVersionDetail(version),
+            _ => builder => builder.AddContent(0, "Unknown item type")
+        };
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        selectedItemDetail = null;
+        StateHasChanged();
+    }
+
+    private void ShowGroupJson(VehicleModel model)
+    {
+        selectedItemDetail = RenderGroupDetailForModel(model);
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private RenderFragment RenderBrandDetail(VehicleBrand brand) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.OpenElement(1, "div");
+        builder.AddAttribute(2, "class", "detail-item");
+        builder.OpenElement(3, "div");
+        builder.AddAttribute(4, "class", "detail-label");
+        builder.AddContent(5, "ubyId");
+        builder.CloseElement();
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "class", "detail-value");
+        builder.AddContent(8, brand.UbyId ?? "-");
+        builder.CloseElement();
+        builder.CloseElement();
+        
+        builder.OpenElement(9, "div");
+        builder.AddAttribute(10, "class", "detail-item");
+        builder.OpenElement(11, "div");
+        builder.AddAttribute(12, "class", "detail-label");
+        builder.AddContent(13, "@uri");
+        builder.CloseElement();
+        builder.OpenElement(14, "div");
+        builder.AddAttribute(15, "class", "detail-value");
+        if (!string.IsNullOrEmpty(brand.Uri))
+        {
+            builder.OpenElement(16, "a");
+            builder.AddAttribute(17, "href", brand.Uri);
+            builder.AddAttribute(18, "target", "_blank");
+            builder.AddContent(19, brand.Uri);
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.AddContent(20, "-");
+        }
+        builder.CloseElement();
+        builder.CloseElement();
+        
+        builder.OpenElement(21, "div");
+        builder.AddAttribute(22, "class", "detail-item");
+        builder.OpenElement(23, "div");
+        builder.AddAttribute(24, "class", "detail-label");
+        builder.AddContent(25, "description");
+        builder.CloseElement();
+        builder.OpenElement(26, "div");
+        builder.AddAttribute(27, "class", "detail-value");
+        builder.AddContent(28, brand.Description ?? "-");
+        builder.CloseElement();
+        builder.CloseElement();
+        
+        builder.OpenElement(29, "div");
+        builder.AddAttribute(30, "class", "detail-item");
+        builder.OpenElement(31, "div");
+        builder.AddAttribute(32, "class", "detail-label");
+        builder.AddContent(33, "modifiedtime");
+        builder.CloseElement();
+        builder.OpenElement(34, "div");
+        builder.AddAttribute(35, "class", "detail-value");
+        builder.AddContent(36, brand.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+        builder.CloseElement();
+        builder.CloseElement();
+        
+        builder.OpenElement(37, "div");
+        builder.AddAttribute(38, "class", "detail-item");
+        builder.OpenElement(39, "div");
+        builder.AddAttribute(40, "class", "detail-label");
+        builder.AddContent(41, "sealed");
+        builder.CloseElement();
+        builder.OpenElement(42, "div");
+        builder.AddAttribute(43, "class", "detail-value");
+        builder.AddContent(44, brand.Sealed ?? "-");
+        builder.CloseElement();
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderGroupDetail(VehicleGroup group) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.OpenElement(1, "div");
+        builder.AddAttribute(2, "class", "detail-item");
+        builder.OpenElement(3, "div");
+        builder.AddAttribute(4, "class", "detail-label");
+        builder.AddContent(5, "ubyId");
+        builder.CloseElement();
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "class", "detail-value");
+        builder.AddContent(8, group.UbyId ?? "-");
+        builder.CloseElement();
+        builder.CloseElement();
+        
+        builder.OpenElement(9, "div");
+        builder.AddAttribute(10, "class", "detail-item");
+        builder.OpenElement(11, "div");
+        builder.AddAttribute(12, "class", "detail-label");
+        builder.AddContent(13, "@uri");
+        builder.CloseElement();
+        builder.OpenElement(14, "div");
+        builder.AddAttribute(15, "class", "detail-value");
+        if (!string.IsNullOrEmpty(group.Uri))
+        {
+            builder.OpenElement(16, "a");
+            builder.AddAttribute(17, "href", group.Uri);
+            builder.AddAttribute(18, "target", "_blank");
+            builder.AddContent(19, group.Uri);
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.AddContent(20, "-");
+        }
+        builder.CloseElement();
+        builder.CloseElement();
+        
+        builder.OpenElement(21, "div");
+        builder.AddAttribute(22, "class", "detail-item");
+        builder.OpenElement(23, "div");
+        builder.AddAttribute(24, "class", "detail-label");
+        builder.AddContent(25, "modifiedtime");
+        builder.CloseElement();
+        builder.OpenElement(26, "div");
+        builder.AddAttribute(27, "class", "detail-value");
+        builder.AddContent(28, group.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+        builder.CloseElement();
+        builder.CloseElement();
+        
+        builder.OpenElement(29, "div");
+        builder.AddAttribute(30, "class", "detail-item");
+        builder.OpenElement(31, "div");
+        builder.AddAttribute(32, "class", "detail-label");
+        builder.AddContent(33, "sealed");
+        builder.CloseElement();
+        builder.OpenElement(34, "div");
+        builder.AddAttribute(35, "class", "detail-value");
+        builder.AddContent(36, group.Sealed ?? "-");
+        builder.CloseElement();
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderModelDetail(VehicleModel model) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        
+        // Basic fields
+        AddDetailItem(builder, 1, "ubyId", model.UbyId ?? "-");
+        AddDetailItem(builder, 10, "@uri", model.Uri, isLink: true);
+        AddDetailItem(builder, 20, "description", model.Description ?? "-");
+        AddDetailItem(builder, 30, "modifiedtime", model.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+        AddDetailItem(builder, 40, "sealed", model.Sealed ?? "-");
+        
+        // Brand
+        if (model.Brand != null)
+        {
+            builder.OpenElement(50, "div");
+            builder.AddAttribute(51, "class", "detail-item");
+            builder.OpenElement(52, "div");
+            builder.AddAttribute(53, "class", "detail-label");
+            builder.AddContent(54, "brand");
+            builder.CloseElement();
+            builder.OpenElement(55, "div");
+            builder.AddAttribute(56, "class", "detail-value");
+            builder.OpenElement(57, "div");
+            builder.AddAttribute(58, "style", "padding-left: 1rem; margin-top: 0.5rem;");
+            AddDetailItem(builder, 60, "brand.ubyId", model.Brand.UbyId ?? "-");
+            AddDetailItem(builder, 70, "brand.@uri", model.Brand.Uri, isLink: true);
+            AddDetailItem(builder, 80, "brand.description", model.Brand.Description ?? "-");
+            AddDetailItem(builder, 90, "brand.modifiedtime", model.Brand.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+            AddDetailItem(builder, 100, "brand.sealed", model.Brand.Sealed ?? "-");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        
+        // Group
+        if (model.Group?.BrisaVehicleGroup != null && model.Group.BrisaVehicleGroup.Any())
+        {
+            builder.OpenElement(110, "div");
+            builder.AddAttribute(111, "class", "detail-item");
+            builder.OpenElement(112, "div");
+            builder.AddAttribute(113, "class", "detail-label");
+            builder.AddContent(114, "group");
+            builder.CloseElement();
+            builder.OpenElement(115, "div");
+            builder.AddAttribute(116, "class", "detail-value");
+            builder.OpenElement(117, "div");
+            builder.AddAttribute(118, "style", "padding-left: 1rem; margin-top: 0.5rem;");
+            foreach (var group in model.Group.BrisaVehicleGroup)
+            {
+                builder.OpenElement(120, "div");
+                builder.AddAttribute(121, "style", "margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: 6px;");
+                AddDetailItem(builder, 130, "group.ubyId", group.UbyId ?? "-");
+                AddDetailItem(builder, 140, "group.@uri", group.Uri, isLink: true);
+                AddDetailItem(builder, 150, "group.modifiedtime", group.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+                AddDetailItem(builder, 160, "group.sealed", group.Sealed ?? "-");
+                builder.CloseElement();
+            }
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderProductYearDetail(VehicleProductYear year) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        
+        // Basic fields
+        AddDetailItem(builder, 1, "ubyId", year.UbyId ?? "-");
+        AddDetailItem(builder, 10, "@uri", year.Uri, isLink: true);
+        AddDetailItem(builder, 20, "productYear", year.ProductYear ?? "-");
+        AddDetailItem(builder, 30, "size", year.Size ?? "-");
+        AddDetailItem(builder, 40, "aspectRatio", year.AspectRatio ?? "-");
+        AddDetailItem(builder, 50, "rimDiameter", year.RimDiameter ?? "-");
+        AddDetailItem(builder, 60, "sectionWidth", year.SectionWidth ?? "-");
+        AddDetailItem(builder, 70, "speedIndex", year.SpeedIndex ?? "-");
+        AddDetailItem(builder, 80, "frontRear", year.FrontRear ?? "-");
+        AddDetailItem(builder, 90, "modifiedtime", year.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+        AddDetailItem(builder, 100, "sealed", year.Sealed ?? "-");
+        
+        // Body
+        if (year.Body?.BrisaVehicleBodyType != null)
+        {
+            builder.OpenElement(110, "div");
+            builder.AddAttribute(111, "class", "detail-item");
+            builder.OpenElement(112, "div");
+            builder.AddAttribute(113, "class", "detail-label");
+            builder.AddContent(114, "body");
+            builder.CloseElement();
+            builder.OpenElement(115, "div");
+            builder.AddAttribute(116, "class", "detail-value");
+            builder.OpenElement(117, "div");
+            builder.AddAttribute(118, "style", "padding-left: 1rem; margin-top: 0.5rem;");
+            var body = year.Body.BrisaVehicleBodyType;
+            AddDetailItem(builder, 120, "body.ubyId", body.UbyId ?? "-");
+            AddDetailItem(builder, 130, "body.@uri", body.Uri, isLink: true);
+            AddDetailItem(builder, 140, "body.modifiedtime", body.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+            AddDetailItem(builder, 150, "body.sealed", body.Sealed ?? "-");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        
+        // Brand
+        if (year.Brand != null)
+        {
+            builder.OpenElement(160, "div");
+            builder.AddAttribute(161, "class", "detail-item");
+            builder.OpenElement(162, "div");
+            builder.AddAttribute(163, "class", "detail-label");
+            builder.AddContent(164, "brand");
+            builder.CloseElement();
+            builder.OpenElement(165, "div");
+            builder.AddAttribute(166, "class", "detail-value");
+            builder.OpenElement(167, "div");
+            builder.AddAttribute(168, "style", "padding-left: 1rem; margin-top: 0.5rem;");
+            AddDetailItem(builder, 170, "brand.ubyId", year.Brand.UbyId ?? "-");
+            AddDetailItem(builder, 180, "brand.@uri", year.Brand.Uri, isLink: true);
+            AddDetailItem(builder, 190, "brand.description", year.Brand.Description ?? "-");
+            AddDetailItem(builder, 200, "brand.modifiedtime", year.Brand.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+            AddDetailItem(builder, 210, "brand.sealed", year.Brand.Sealed ?? "-");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        
+        // Model
+        if (year.Model != null)
+        {
+            builder.OpenElement(220, "div");
+            builder.AddAttribute(221, "class", "detail-item");
+            builder.OpenElement(222, "div");
+            builder.AddAttribute(223, "class", "detail-label");
+            builder.AddContent(224, "model");
+            builder.CloseElement();
+            builder.OpenElement(225, "div");
+            builder.AddAttribute(226, "class", "detail-value");
+            builder.OpenElement(227, "div");
+            builder.AddAttribute(228, "style", "padding-left: 1rem; margin-top: 0.5rem;");
+            AddDetailItem(builder, 230, "model.ubyId", year.Model.UbyId ?? "-");
+            AddDetailItem(builder, 240, "model.@uri", year.Model.Uri, isLink: true);
+            AddDetailItem(builder, 250, "model.description", year.Model.Description ?? "-");
+            AddDetailItem(builder, 260, "model.modifiedtime", year.Model.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+            AddDetailItem(builder, 270, "model.sealed", year.Model.Sealed ?? "-");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        
+        // Version
+        if (year.Version != null)
+        {
+            builder.OpenElement(280, "div");
+            builder.AddAttribute(281, "class", "detail-item");
+            builder.OpenElement(282, "div");
+            builder.AddAttribute(283, "class", "detail-label");
+            builder.AddContent(284, "version");
+            builder.CloseElement();
+            builder.OpenElement(285, "div");
+            builder.AddAttribute(286, "class", "detail-value");
+            builder.OpenElement(287, "div");
+            builder.AddAttribute(288, "style", "padding-left: 1rem; margin-top: 0.5rem;");
+            AddDetailItem(builder, 290, "version.ubyId", year.Version.UbyId ?? "-");
+            AddDetailItem(builder, 300, "version.@uri", year.Version.Uri, isLink: true);
+            AddDetailItem(builder, 310, "version.description", year.Version.Description ?? "-");
+            AddDetailItem(builder, 320, "version.versionCode", year.Version.VersionCode ?? "-");
+            AddDetailItem(builder, 330, "version.modifiedtime", year.Version.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+            AddDetailItem(builder, 340, "version.sealed", year.Version.Sealed ?? "-");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderVersionDetail(VehicleVersion version) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        
+        // Basic fields
+        AddDetailItem(builder, 1, "ubyId", version.UbyId ?? "-");
+        AddDetailItem(builder, 10, "@uri", version.Uri, isLink: true);
+        AddDetailItem(builder, 20, "description", version.Description ?? "-");
+        AddDetailItem(builder, 30, "versionCode", version.VersionCode ?? "-");
+        AddDetailItem(builder, 40, "modifiedtime", version.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+        AddDetailItem(builder, 50, "sealed", version.Sealed ?? "-");
+        
+        // Model
+        if (version.Model != null)
+        {
+            builder.OpenElement(60, "div");
+            builder.AddAttribute(61, "class", "detail-item");
+            builder.OpenElement(62, "div");
+            builder.AddAttribute(63, "class", "detail-label");
+            builder.AddContent(64, "model");
+            builder.CloseElement();
+            builder.OpenElement(65, "div");
+            builder.AddAttribute(66, "class", "detail-value");
+            builder.OpenElement(67, "div");
+            builder.AddAttribute(68, "style", "padding-left: 1rem; margin-top: 0.5rem;");
+            AddDetailItem(builder, 70, "model.ubyId", version.Model.UbyId ?? "-");
+            AddDetailItem(builder, 80, "model.@uri", version.Model.Uri, isLink: true);
+            AddDetailItem(builder, 90, "model.description", version.Model.Description ?? "-");
+            AddDetailItem(builder, 100, "model.modifiedtime", version.Model.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+            AddDetailItem(builder, 110, "model.sealed", version.Model.Sealed ?? "-");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        
+        builder.CloseElement();
+    };
+
+    private RenderFragment RenderGroupDetailForModel(VehicleModel model) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.OpenElement(1, "div");
+        builder.AddAttribute(2, "class", "detail-item");
+        builder.OpenElement(3, "div");
+        builder.AddAttribute(4, "class", "detail-label");
+        builder.AddContent(5, "group");
+        builder.CloseElement();
+        builder.OpenElement(6, "div");
+        builder.AddAttribute(7, "class", "detail-value");
+        
+        if (model.Group?.BrisaVehicleGroup != null && model.Group.BrisaVehicleGroup.Any())
+        {
+            builder.OpenElement(8, "div");
+            builder.AddAttribute(9, "style", "padding-left: 1rem; margin-top: 0.5rem;");
+            foreach (var group in model.Group.BrisaVehicleGroup)
+            {
+                builder.OpenElement(10, "div");
+                builder.AddAttribute(11, "style", "margin-bottom: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: 6px;");
+                AddDetailItem(builder, 20, "ubyId", group.UbyId ?? "-");
+                AddDetailItem(builder, 30, "@uri", group.Uri, isLink: true);
+                AddDetailItem(builder, 40, "modifiedtime", group.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+                AddDetailItem(builder, 50, "sealed", group.Sealed ?? "-");
+                builder.CloseElement();
+            }
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.AddContent(60, "-");
+        }
+        
+        builder.CloseElement();
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private void AddDetailItem(RenderTreeBuilder builder, int sequence, string label, string? value, bool isLink = false)
+    {
+        builder.OpenElement(sequence, "div");
+        builder.AddAttribute(sequence + 1, "class", "detail-item");
+        builder.OpenElement(sequence + 2, "div");
+        builder.AddAttribute(sequence + 3, "class", "detail-label");
+        builder.AddContent(sequence + 4, label);
+        builder.CloseElement();
+        builder.OpenElement(sequence + 5, "div");
+        builder.AddAttribute(sequence + 6, "class", "detail-value");
+        if (isLink && !string.IsNullOrEmpty(value))
+        {
+            builder.OpenElement(sequence + 7, "a");
+            builder.AddAttribute(sequence + 8, "href", value);
+            builder.AddAttribute(sequence + 9, "target", "_blank");
+            builder.AddContent(sequence + 10, value);
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.AddContent(sequence + 7, value ?? "-");
+        }
+        builder.CloseElement();
+        builder.CloseElement();
+    }
+}
+
+@* Table Components - Max 5 columns + Detail button *@
+
+@code {
+    private RenderFragment BrandsTableSimple(List<VehicleBrand> items) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "modern-table-container table-responsive");
+        builder.OpenElement(2, "table");
+        builder.AddAttribute(3, "class", "table modern-table");
+        builder.AddMarkupContent(4, "<thead><tr><th>ubyId</th><th>@uri</th><th>description</th><th>modifiedtime</th><th>sealed</th><th>Detay</th></tr></thead>");
+        builder.OpenElement(5, "tbody");
+        foreach (var item in items)
+        {
+            builder.OpenElement(7, "tr");
+            var itemCopy = item; // Capture for closure
+            builder.OpenElement(8, "td");
+            builder.AddContent(9, item.UbyId ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(10, "td");
+            if (!string.IsNullOrEmpty(item.Uri))
+            {
+                builder.OpenElement(11, "a");
+                builder.AddAttribute(12, "href", item.Uri);
+                builder.AddAttribute(13, "target", "_blank");
+                builder.AddAttribute(14, "class", "text-truncate d-inline-block");
+                builder.AddAttribute(15, "style", "max-width: 200px;");
+                builder.AddContent(16, item.Uri);
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.AddContent(17, "-");
+            }
+            builder.CloseElement();
+            builder.OpenElement(18, "td");
+            builder.AddContent(19, item.Description ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(20, "td");
+            builder.AddContent(21, item.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(22, "td");
+            builder.AddContent(23, item.Sealed ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(24, "td");
+            builder.OpenElement(25, "button");
+            builder.AddAttribute(26, "class", "btn-detail");
+            builder.AddAttribute(27, "onclick", EventCallback.Factory.Create(this, () => ShowDetailModal(itemCopy)));
+            builder.AddContent(28, "Detay");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        builder.CloseElement(); builder.CloseElement(); builder.CloseElement();
+    };
+
+    private RenderFragment GroupsTableSimple(List<VehicleGroup> items) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "modern-table-container table-responsive");
+        builder.OpenElement(2, "table");
+        builder.AddAttribute(3, "class", "table modern-table");
+        builder.AddMarkupContent(4, "<thead><tr><th>ubyId</th><th>@uri</th><th>modifiedtime</th><th>sealed</th><th>Detay</th></tr></thead>");
+        builder.OpenElement(5, "tbody");
+        foreach (var item in items)
+        {
+            builder.OpenElement(7, "tr");
+            var itemCopy = item;
+            builder.OpenElement(8, "td");
+            builder.AddContent(9, item.UbyId ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(10, "td");
+            if (!string.IsNullOrEmpty(item.Uri))
+            {
+                builder.OpenElement(11, "a");
+                builder.AddAttribute(12, "href", item.Uri);
+                builder.AddAttribute(13, "target", "_blank");
+                builder.AddAttribute(14, "class", "text-truncate d-inline-block");
+                builder.AddAttribute(15, "style", "max-width: 200px;");
+                builder.AddContent(16, item.Uri);
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.AddContent(17, "-");
+            }
+            builder.CloseElement();
+            builder.OpenElement(18, "td");
+            builder.AddContent(19, item.ModifiedTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(20, "td");
+            builder.AddContent(21, item.Sealed ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(22, "td");
+            builder.OpenElement(23, "button");
+            builder.AddAttribute(24, "class", "btn-detail");
+            builder.AddAttribute(25, "onclick", EventCallback.Factory.Create(this, () => ShowDetailModal(itemCopy)));
+            builder.AddContent(26, "Detay");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        builder.CloseElement(); builder.CloseElement(); builder.CloseElement();
+    };
+
+    private RenderFragment ModelsTableSimple(List<VehicleModel> items) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "modern-table-container table-responsive");
+        builder.OpenElement(2, "table");
+        builder.AddAttribute(3, "class", "table modern-table");
+        builder.AddMarkupContent(4, "<thead><tr><th>ubyId</th><th>@uri</th><th>description</th><th>brand.ubyId</th><th>group</th><th>Detay</th></tr></thead>");
+        builder.OpenElement(5, "tbody");
+        foreach (var item in items)
+        {
+            builder.OpenElement(7, "tr");
+            var itemCopy = item;
+            builder.OpenElement(8, "td");
+            builder.AddContent(9, item.UbyId ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(10, "td");
+            if (!string.IsNullOrEmpty(item.Uri))
+            {
+                builder.OpenElement(11, "a");
+                builder.AddAttribute(12, "href", item.Uri);
+                builder.AddAttribute(13, "target", "_blank");
+                builder.AddAttribute(14, "class", "text-truncate d-inline-block");
+                builder.AddAttribute(15, "style", "max-width: 200px;");
+                builder.AddContent(16, item.Uri);
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.AddContent(17, "-");
+            }
+            builder.CloseElement();
+            builder.OpenElement(18, "td");
+            builder.AddContent(19, item.Description ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(20, "td");
+            builder.AddContent(21, item.Brand?.UbyId ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(22, "td");
+            if (item.RawJson != null && item.Group != null)
+            {
+                builder.OpenElement(23, "button");
+                builder.AddAttribute(24, "class", "btn-detail");
+                builder.AddAttribute(25, "onclick", EventCallback.Factory.Create(this, () => ShowGroupJson(itemCopy)));
+                builder.AddContent(26, "JSON Göster");
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.AddContent(27, "-");
+            }
+            builder.CloseElement();
+            builder.OpenElement(28, "td");
+            builder.OpenElement(29, "button");
+            builder.AddAttribute(30, "class", "btn-detail");
+            builder.AddAttribute(31, "onclick", EventCallback.Factory.Create(this, () => ShowDetailModal(itemCopy)));
+            builder.AddContent(32, "Detay");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        builder.CloseElement(); builder.CloseElement(); builder.CloseElement();
+    };
+
+    private RenderFragment ProductYearsTableSimple(PagedResult<VehicleProductYear>? pagedResult) => builder =>
+    {
+        if (pagedResult == null || !pagedResult.Items.Any())
+        {
+            builder.AddMarkupContent(0, "<div class=\"empty-state\"><div class=\"empty-state-icon\">📭</div><h3>Veri bulunamadı</h3><p>Arama kriterlerinizi değiştirmeyi deneyin.</p></div>");
+            return;
+        }
+
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "modern-table-container table-responsive");
+        builder.OpenElement(2, "table");
+        builder.AddAttribute(3, "class", "table modern-table");
+        builder.AddMarkupContent(4, "<thead><tr><th>ubyId</th><th>@uri</th><th>productYear</th><th>size</th><th>aspectRatio</th><th>Detay</th></tr></thead>");
+        builder.OpenElement(5, "tbody");
+        foreach (var item in pagedResult.Items)
+        {
+            builder.OpenElement(7, "tr");
+            var itemCopy = item;
+            builder.OpenElement(8, "td");
+            builder.AddContent(9, item.UbyId ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(10, "td");
+            if (!string.IsNullOrEmpty(item.Uri))
+            {
+                builder.OpenElement(11, "a");
+                builder.AddAttribute(12, "href", item.Uri);
+                builder.AddAttribute(13, "target", "_blank");
+                builder.AddAttribute(14, "class", "text-truncate d-inline-block");
+                builder.AddAttribute(15, "style", "max-width: 200px;");
+                builder.AddContent(16, item.Uri);
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.AddContent(17, "-");
+            }
+            builder.CloseElement();
+            builder.OpenElement(18, "td");
+            builder.AddContent(19, item.ProductYear ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(20, "td");
+            builder.AddContent(21, item.Size ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(22, "td");
+            builder.AddContent(23, item.AspectRatio ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(24, "td");
+            builder.OpenElement(25, "button");
+            builder.AddAttribute(26, "class", "btn-detail");
+            builder.AddAttribute(27, "onclick", EventCallback.Factory.Create(this, () => ShowDetailModal(itemCopy)));
+            builder.AddContent(28, "Detay");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        builder.CloseElement(); builder.CloseElement(); builder.CloseElement();
+    };
+
+    private RenderFragment VersionsTableSimple(PagedResult<VehicleVersion>? pagedResult) => builder =>
+    {
+        if (pagedResult == null || !pagedResult.Items.Any())
+        {
+            builder.AddMarkupContent(0, "<div class=\"empty-state\"><div class=\"empty-state-icon\">📭</div><h3>Veri bulunamadı</h3><p>Arama kriterlerinizi değiştirmeyi deneyin.</p></div>");
+            return;
+        }
+
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "modern-table-container table-responsive");
+        builder.OpenElement(2, "table");
+        builder.AddAttribute(3, "class", "table modern-table");
+        builder.AddMarkupContent(4, "<thead><tr><th>ubyId</th><th>@uri</th><th>description</th><th>versionCode</th><th>model.ubyId</th><th>Detay</th></tr></thead>");
+        builder.OpenElement(5, "tbody");
+        foreach (var item in pagedResult.Items)
+        {
+            builder.OpenElement(7, "tr");
+            var itemCopy = item;
+            builder.OpenElement(8, "td");
+            builder.AddContent(9, item.UbyId ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(10, "td");
+            if (!string.IsNullOrEmpty(item.Uri))
+            {
+                builder.OpenElement(11, "a");
+                builder.AddAttribute(12, "href", item.Uri);
+                builder.AddAttribute(13, "target", "_blank");
+                builder.AddAttribute(14, "class", "text-truncate d-inline-block");
+                builder.AddAttribute(15, "style", "max-width: 200px;");
+                builder.AddContent(16, item.Uri);
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.AddContent(17, "-");
+            }
+            builder.CloseElement();
+            builder.OpenElement(18, "td");
+            builder.AddContent(19, item.Description ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(20, "td");
+            builder.AddContent(21, item.VersionCode ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(22, "td");
+            builder.AddContent(23, item.Model?.UbyId ?? "-");
+            builder.CloseElement();
+            builder.OpenElement(24, "td");
+            builder.OpenElement(25, "button");
+            builder.AddAttribute(26, "class", "btn-detail");
+            builder.AddAttribute(27, "onclick", EventCallback.Factory.Create(this, () => ShowDetailModal(itemCopy)));
+            builder.AddContent(28, "Detay");
+            builder.CloseElement();
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        builder.CloseElement(); builder.CloseElement(); builder.CloseElement();
+    };
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "onajODyINMo=",
+  "success": true,
+  "projectFilePath": "/Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/BrisaVehicleDashboard.csproj",
+  "expectedPackageFiles": [
+    "/Users/bhan/.nuget/packages/microsoft.aspnetcore.app.internal.assets/10.0.0-rc.2.25502.107/microsoft.aspnetcore.app.internal.assets.10.0.0-rc.2.25502.107.nupkg.sha512"
+  ],
+  "logs": []
+}
