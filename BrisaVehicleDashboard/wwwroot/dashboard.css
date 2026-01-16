@@ -360,23 +360,24 @@
 
 .modern-table tbody tr {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    border-bottom: 2px solid var(--gray-200);
-    border-top: 1px solid var(--gray-100);
+    border-bottom: 1px solid var(--gray-300);
+    border-top: 1px solid var(--gray-200);
 }
 
 .modern-table tbody tr:first-child {
-    border-top: none;
+    border-top: 1px solid var(--gray-200);
 }
 
 .modern-table tbody tr:hover {
     background: linear-gradient(90deg, rgba(99, 102, 241, 0.05) 0%, rgba(99, 102, 241, 0.02) 100%);
     transform: scale(1.001);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border-bottom-color: var(--gray-300);
+    border-bottom-color: var(--gray-400);
+    border-top-color: var(--gray-300);
 }
 
 .modern-table tbody tr:last-child {
-    border-bottom: 2px solid var(--gray-200);
+    border-bottom: 1px solid var(--gray-300);
 }
 
 .modern-table tbody td {
@@ -386,7 +387,7 @@
     color: var(--gray-700);
     font-size: 0.875rem;
     white-space: nowrap;
-    border-right: 1px solid var(--gray-100);
+    border-right: 1px solid var(--gray-200);
 }
 
 .modern-table tbody td:last-child {
