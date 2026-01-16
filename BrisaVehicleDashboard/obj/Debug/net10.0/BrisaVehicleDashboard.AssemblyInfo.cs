@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BrisaVehicleDashboard")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8b7561553eccf033e39e051026c134a301bb6799")]
 [assembly: System.Reflection.AssemblyProductAttribute("BrisaVehicleDashboard")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BrisaVehicleDashboard")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

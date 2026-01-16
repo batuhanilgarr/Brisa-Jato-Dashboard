@@ -24,7 +24,6 @@
 /Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/scopedcss/bundle/BrisaVehicleDashboard.styles.css
 /Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/scopedcss/projectbundle/BrisaVehicleDashboard.bundle.scp.css
 /Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/compressed/6frwiep9a8-{0}-w7mf952350-w7mf952350.gz
-/Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/compressed/2i4b9defjr-{0}-tmz8z0xnm5-tmz8z0xnm5.gz
 /Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/compressed/5dj8ceks3c-{0}-bqjiyaj88i-bqjiyaj88i.gz
 /Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/compressed/dnd4pw82qh-{0}-c2jlpeoesf-c2jlpeoesf.gz
 /Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/compressed/zisl5zu1mx-{0}-erw9l3u2r3-erw9l3u2r3.gz
@@ -84,3 +83,5 @@
 /Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/BrisaVehicleDashboard.pdb
 /Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/BrisaVehicleDashboard.genruntimeconfig.cache
 /Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/ref/BrisaVehicleDashboard.dll
+/Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/BrisaVehicleDashboard.sourcelink.json
+/Users/bhan/Desktop/brisa_jato_dashboard/BrisaVehicleDashboard/obj/Debug/net10.0/compressed/2i4b9defjr-{0}-lddq2celr8-lddq2celr8.gz
